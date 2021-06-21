@@ -71,6 +71,32 @@ public class LongestPalindrome_Leet5 {
     }
 
     /**
+     * 中心扩散法， 理解到位的做法
+     * @param s
+     * @return
+     */
+    public static String longestPalindrome2(String s) {
+        if (s == null || s.length() == 0) {
+            return 0;
+        }
+        int len = s.length();
+        String result = "";
+        for (int i = 0; i < 2 * len - 1; i++) {
+            int left = i / 2;
+            int right = left + i % 2;
+            while(left >= 0 && right < len && (s.charAt(left) == s.charAt(right))) {
+                String tmp = s.substring(left, right + 1);
+                if (tmp.length() > result.length()) {
+                    result = tmp;
+                }
+                left--;
+                right++;
+            }
+        }
+        return result;
+    }
+
+    /**
      * 中心扩散法， 目前能够理解的也只有中心扩散算法了
      * @param s
      * @return
