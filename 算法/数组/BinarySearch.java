@@ -9,6 +9,7 @@ import android.util.Log;
  *     二分查找的两种写法 : （根据开闭区间来写判断条件）
  *     1. 【】左闭右闭
  *     2. 【）左闭右开
+ *     时间复杂度 ：二分查找所需的时间复杂度为 O(logn)。
  * </p>
  * Created by caixi on 6/23/21.
  */
@@ -61,7 +62,7 @@ public class BinarySearch {
         int left = 0;
         int right = nums.length;
         while(left < right) {
-            int middle = left + (right - left) >> 2;
+            int middle = left + ((right - left) >> 1);
             if (target < nums[middle]) {
                 right = middle;
             } else if (target > nums[middle]) {
