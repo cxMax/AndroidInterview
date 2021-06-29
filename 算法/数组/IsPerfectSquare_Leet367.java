@@ -25,7 +25,7 @@ package com.android.test1;
  * </p>
  * Created by caixi on 6/25/21.
  */
-public class IsPerfectSquare_Leet369 {
+public class IsPerfectSquare_Leet367 {
 
 
     /**
