@@ -55,7 +55,7 @@ public class SearchRange_Leet34 {
         while(end < nums.length - 1 && nums[end + 1] == target) {
             end++;
         }
-        return new int[]{start + 1, end - 1};
+        return new int[]{start, end};
     }
 
 
