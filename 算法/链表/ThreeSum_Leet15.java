@@ -30,7 +30,7 @@ public class ThreeSum_Leet15 {
                 continue;
             }
             // 指针往前移动， 去重
-            if (nums[i] == nums[i + 1]) {
+            if (i > 0 && nums[i] == nums[i - 1]) {
                 continue;
             }
             int left = i + 1;
