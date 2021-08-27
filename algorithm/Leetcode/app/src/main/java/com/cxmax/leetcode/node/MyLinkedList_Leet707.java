@@ -101,4 +101,75 @@ public class MyLinkedList_Leet707 {
             prev.next = prev.next.next;
         }
     }
+
+
+    /**
+     * 使用单向列表实现 队列
+     */
+    public static class MyLinkedList {
+
+        ListNode head;
+        int size;
+
+        public MyLinkedList() {
+            head = new ListNode(-1, null);
+            size = 0;
+        }
+
+        public int get(int index) {
+            if (index < 0 || index >= size) {
+                return -1;
+            }
+            ListNode prev = head;
+            for (int i = 0; i <= index; i++) {
+                prev = prev.next;
+            }
+            return prev.val;
+
+        }
+
+        public void addAtHead(int val) {
+            addAtIndex(0, val);
+        }
+
+        public void addAtTail(int val) {
+            addAtIndex(size, val);
+        }
+
+        public void addAtIndex(int index, int val) {
+            if (index < 0) {
+                index = 0;
+            }
+            if (index > size) {
+                index = size;
+            }
+            size++;
+            ListNode prev = head;
+            // 这个操作也是移动到前一个节点
+            for (int i = 0; i < index; i++) {
+                prev = prev.next;
+            }
+            ListNode node = new ListNode(val);
+            node.next = prev.next;
+            prev.next = node;
+        }
+
+        public void deleteAtIndex(int index) {
+            if (index < 0 || index >= size) {
+                return;
+            }
+            size--;
+            ListNode prev = head;
+            for (int i = 0; i < index; i++) {
+                prev = prev.next;
+            }
+            if (prev.next != null) {
+                prev.next = prev.next.next;
+            }
+        }
+
+
+    }
+
 }
+
