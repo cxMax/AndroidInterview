@@ -21,7 +21,25 @@ import java.util.Map;
  */
 public class TwoSum_Leet1 {
 
+    /**
+     * 这道题其实就是，通过HashMap来做，但是有一点，不能为重复元素
+     * @param nums
+     * @param target
+     * @return
+     */
     public int[] twoSum(int[] nums, int target) {
-
+        int[] result = new int[2];
+        // 第一位数字， 第二位角标
+        Map<Integer, Integer> map = new HashMap<>();
+        for (int i = 0; i < nums.length; i++) {
+            int cur = nums[i];
+            int num = target - cur;
+            if (map.containsKey(num)) {
+                result[0] = i;
+                result[1] = map.get(num);
+            }
+            map.put(cur, i);
+        }
+        return result;
     }
 }
