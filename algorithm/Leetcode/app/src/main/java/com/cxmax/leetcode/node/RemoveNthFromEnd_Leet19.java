@@ -46,4 +46,38 @@ public class RemoveNthFromEnd_Leet19 {
     }
 
 
+    /**
+     * 移除倒数第n个节点
+     * @param head
+     * @param n
+     * @return
+     */
+    public ListNode removeNthFromEnd1(ListNode head, int n) {
+        // 出错的地方，这里要构造虚拟节点
+        ListNode dummy = new ListNode(-1, head);
+
+
+
+        // 双指针， 构造快、慢两个指针
+        ListNode fast = dummy;
+        ListNode slow = dummy;
+        // 快指针先走n步
+        for (int i = 0; i <= n; i++) {
+            fast = fast.next;
+        }
+
+        // 快指针走到底的时候，
+        while(fast != null) {
+            fast = fast.next;
+            slow = slow.next;
+        }
+
+        //这个时候，移除指针
+        slow.next = slow.next.next;
+        return dummy.next;
+
+
+
+    }
+
 }

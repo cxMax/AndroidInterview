@@ -33,4 +33,23 @@ public class ReverseList_Leet206 {
     }
 
 
+    /**
+     * 重复做题，加深印象 repeat 1
+     * @param head
+     * @return
+     */
+    public ListNode reverseList1(ListNode head) {
+        ListNode prev = null;
+        ListNode cur = head;
+        ListNode tmp = null;
+        while(cur != null) {
+            tmp = cur.next;
+            cur.next = prev;
+            prev = cur;
+            cur = tmp;
+        }
+        return prev;
+    }
+
+
 }
