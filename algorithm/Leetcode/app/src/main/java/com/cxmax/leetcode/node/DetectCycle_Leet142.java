@@ -42,7 +42,28 @@ public class DetectCycle_Leet142 {
             slow = slow.next;
         }
         return fast;
+    }
 
+
+    public ListNode detectCycle1(ListNode head) {
+        ListNode fast = head;
+        ListNode slow = head;
+        while(true) {
+            if (fast == null || fast.next == null) {
+                return null;
+            }
+            fast = fast.next.next;
+            slow = slow.next;
+            if (fast == slow) {
+                break;
+            }
+        }
+        fast = head;
+        while(fast != slow) {
+            fast = fast.next;
+            slow = slow.next;
+        }
+        return fast;
     }
 
 }
