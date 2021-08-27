@@ -20,4 +20,16 @@ public class GetIntersectionNode_Leet160 {
         }
         return a;
     }
+
+    // 判断两个链表是否相交
+    public ListNode getIntersectionNode1(ListNode headA, ListNode headB) {
+        ListNode a = headA;
+        ListNode b = headB;
+        while(a != b) {
+            a = (a != null) ? a.next : headB;
+            b = (b != null) ? b.next : headA;
+        }
+        return a;
+    }
+
 }
