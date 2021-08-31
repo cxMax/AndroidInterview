@@ -52,4 +52,24 @@ public class ReverseList_Leet206 {
     }
 
 
+    /**
+     * 三刷 链表反转
+     * @param head
+     * @return
+     */
+    public ListNode reverseList2(ListNode head) {
+        ListNode prev = null;
+        ListNode cur = head;
+        ListNode tmp = null;
+        while(cur != null) {
+            tmp = cur.next;
+            cur.next = prev;
+            prev = cur;
+            cur = tmp;
+        }
+        return prev;
+    }
+
+
+
 }
