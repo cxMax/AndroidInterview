@@ -63,7 +63,7 @@ public class LevelOrder_Leet102 {
 
         while(!queue.isEmpty()) {
             List<Integer> itemList = new ArrayList<>();
-            int len = itemList.size();
+            int len = queue.size();
 
             while(len > 0) {
                 // 先把头节点弹出
@@ -118,7 +118,7 @@ public class LevelOrder_Leet102 {
         queue.offer(node);
         while(!queue.isEmpty()) {
             List<Integer> item = new ArrayList<>();
-            int len = item.size();
+            int len = queue.size();
             while(len > 0) {
                 TreeNode tmp = queue.poll();
                 item.add(tmp.val);
@@ -130,6 +130,7 @@ public class LevelOrder_Leet102 {
                 }
                 len--;
             }
+            result.add(item);
         }
     }
 }
