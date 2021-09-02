@@ -80,7 +80,56 @@ public class LevelOrder_Leet102 {
             }
             result.add(itemList);
         }
+    }
+
+    /**
+     * 二刷、 深度遍历， 就是递归
+     * @param node
+     * @param deep
+     */
+    public void dfs(TreeNode node, int deep) {
+        if (node == null) {
+            return;
+        }
+        deep++;
+        if (result.size() < deep) {
+            List<Integer> item = new ArrayList<>();
+            result.add(item);
+        }
+        result.get(deep - 1).add(node.val);
+        if (node.left != null) {
+            dfs(node.left, deep);
+        }
+        if (node.right != null) {
+            dfs(node.right, deep);
+        }
+    }
 
 
+    /**
+     * 二刷、层序遍历， 用栈来实现循环
+     * @param node
+     */
+    public void bfs(TreeNode node) {
+        if (node == null) {
+            return;
+        }
+        Queue<TreeNode> queue = new LinkedList<>();
+        queue.offer(node);
+        while(!queue.isEmpty()) {
+            List<Integer> item = new ArrayList<>();
+            int len = item.size();
+            while(len > 0) {
+                TreeNode tmp = queue.poll();
+                item.add(tmp.val);
+                if (tmp.left != null) {
+                    queue.offer(tmp.left);
+                }
+                if (tmp.right != null) {
+                    queue.offer(tmp.right);
+                }
+                len--;
+            }
+        }
     }
 }
