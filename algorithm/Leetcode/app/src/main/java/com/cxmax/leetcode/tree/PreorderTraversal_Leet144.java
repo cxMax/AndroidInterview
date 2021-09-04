@@ -66,4 +66,51 @@ public class PreorderTraversal_Leet144 {
         }
         return result;
     }
+
+    /**
+     * bfs 广度遍历优先做法 ， 二刷， 找找感觉
+     * 利用stack来做, 先进后出， 根 左 右 ， 根 右 左
+     * @param root
+     * @return
+     */
+    public List<Integer> preorderTraversal2(TreeNode root) {
+        List<Integer> result = new ArrayList<>();
+        if (root == null) {
+            return result;
+        }
+        Stack<TreeNode> stack = new Stack<>();
+        stack.push(root);
+        while (!stack.isEmpty()) {
+            TreeNode node = stack.pop();
+            result.add(node.val);
+            if (node.right != null) {
+                stack.push(node.right);
+            }
+            if (node.left != null) {
+                stack.push(node.left);
+            }
+        }
+        return result;
+
+    }
+
+    /**
+     * 前序遍历递归做法，  也就是dfs， 二刷，找找感觉
+     * @param root
+     * @return
+     */
+    public List<Integer> preorderTraversal3(TreeNode root) {
+        List<Integer> result = new ArrayList<>();
+        if (root == null) {
+            return result;
+        }
+        preorder(root, result);
+        return result;
+    }
+
+    private void preorder(TreeNode node, List<Integer> result) {
+        result.add(node.val);
+        preorder(node.left, result);
+        preorder(node.right, result);
+    }
 }
