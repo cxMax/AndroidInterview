@@ -18,7 +18,7 @@ public class RightSideView_Leet199 {
 
 
     public List<Integer> rightSideView(TreeNode root) {
-
+        return bfs(root);
     }
 
     public List<Integer> bfs(TreeNode node) {
