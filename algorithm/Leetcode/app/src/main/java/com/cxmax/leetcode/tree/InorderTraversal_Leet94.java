@@ -63,4 +63,31 @@ public class InorderTraversal_Leet94 {
         }
         return result;
     }
+
+    /**
+     * 中序遍历， 二刷
+     * @param root
+     * @return
+     */
+    public List<Integer> inorderTraversal2(TreeNode root) {
+        List<Integer> result = new ArrayList<>();
+        if (root == null) {
+            return result;
+        }
+        Stack<TreeNode> stack = new Stack<>();
+        // 他这个需要前、后两个节点做比较
+        TreeNode cur = root;
+        while(cur != null || !stack.isEmpty()) {
+            if (cur != null) {
+                stack.push(cur);
+                cur = cur.left;
+            } else {
+                // 这个就是根节点
+                cur = stack.pop();
+                result.add(cur.val);
+                cur = cur.right;
+            }
+        }
+        return result;
+    }
 }
