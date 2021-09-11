@@ -32,4 +32,21 @@ public class GetIntersectionNode_Leet160 {
         return a;
     }
 
+
+    /**
+     * 链表相交的问题
+     * @param headA
+     * @param headB
+     * @return
+     */
+    public ListNode getIntersectionNode2(ListNode headA, ListNode headB) {
+        ListNode a = headA;
+        ListNode b = headB;
+        while(a != b) {
+            a = (a != null) ? a.next : headB;
+            b = (b != null) ? b.next : headA;
+        }
+        return a;
+    }
+
 }
