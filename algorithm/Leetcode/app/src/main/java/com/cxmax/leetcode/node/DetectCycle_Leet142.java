@@ -66,4 +66,39 @@ public class DetectCycle_Leet142 {
         return fast;
     }
 
+    /**
+     * 判断链表是否有环。 返回相交的点
+     * 固定算法， 双指针 快慢指针, 快指针走两步，慢指针走一步， 相遇，重置快指针，
+     * @param head
+     * @return
+     */
+    public ListNode detectCycle2(ListNode head) {
+        if (head == null) {
+            return head;
+        }
+        ListNode fast = head;
+        ListNode slow = head;
+        while(true) {
+            if (fast == null || fast.next == null) {
+                return null;
+            }
+            fast = fast.next.next;
+            slow = slow.next;
+            if (fast == slow) {
+                break;
+            }
+        }
+        // 重置fast指针
+        fast = head;
+        // 再次遍历
+        while(fast != slow){
+            fast = fast.next;
+            slow = slow.next;
+            if (fast == slow) {
+                break;
+            }
+        }
+        return fast;
+    }
+
 }
