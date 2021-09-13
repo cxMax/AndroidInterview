@@ -96,6 +96,24 @@ public class MinSubArrayLen_Leet209 {
             }
         }
         return ret;
+    }
 
+    public int minSubArrayLen3(int target, int[] nums) {
+        if (nums == null || nums.length == 0) {
+            return 0;
+        }
+        int sum = 0;
+        int slow = 0;
+        int ret = 0; // 子序列长度
+        for (int i = 0; i < nums.length; i++) {
+            sum += nums[i];
+            while(sum >= target) {
+                // 移动慢指针
+                ret = i - slow + 1;
+                sum -= nums[slow++];
+            }
+        }
+
+        return ret;
     }
 }
