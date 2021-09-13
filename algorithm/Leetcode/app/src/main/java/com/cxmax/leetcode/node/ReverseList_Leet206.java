@@ -70,6 +70,27 @@ public class ReverseList_Leet206 {
         return prev;
     }
 
+    /**
+     * 四刷反转链表
+     *
+     * 做错了， 是因为 返回节点，完全懵的
+     *
+     * @param head
+     * @return
+     */
+    public ListNode reverseList3(ListNode head) {
+        ListNode prev = null; // 新的头节点， 你要反转嘛
+        ListNode cur = head;
+        ListNode tmp = null;
+        while(cur != null) {
+            tmp = cur.next;
+            cur.next = prev;
+            prev = cur;
+            cur = tmp;
+        }
+
+        return prev
+    }
 
 
 }
