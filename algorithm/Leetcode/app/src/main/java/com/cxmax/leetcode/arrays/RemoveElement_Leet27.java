@@ -74,5 +74,21 @@ public class RemoveElement_Leet27 {
         return slow;
     }
 
+    /**
+     * 数组移除元素， 快慢指针
+     * @param nums
+     * @param val
+     * @return
+     */
+    public int removeElement3(int[] nums, int val) {
+        int slow = 0;
+        for (int i = 0; i < nums.length; i++) {
+            if (nums[i] != val) {
+                nums[slow++] = nums[i];
+            }
+        }
+        return slow;
+    }
+
 
 }

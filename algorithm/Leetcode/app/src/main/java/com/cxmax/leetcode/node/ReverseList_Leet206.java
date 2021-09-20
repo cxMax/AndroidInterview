@@ -89,7 +89,7 @@ public class ReverseList_Leet206 {
             cur = tmp;
         }
 
-        return prev
+        return prev;
     }
 
 
