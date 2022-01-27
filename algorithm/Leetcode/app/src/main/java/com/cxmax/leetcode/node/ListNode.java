@@ -8,8 +8,8 @@ package com.cxmax.leetcode.node;
  * Created by caixi on 8/25/21.
  */
 public class ListNode {
-    int val;
-    ListNode next;
+    public int val;
+    public ListNode next;
 
     public ListNode() {
     }
