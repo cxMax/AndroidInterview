@@ -17,7 +17,7 @@ public class BinarySearch {
      *
      * @param nums
      * @param target
-     * @return
+     * @return 返回目标数字的下标
      */
     public int search(int[] nums, int target) {
         int left = 0;
