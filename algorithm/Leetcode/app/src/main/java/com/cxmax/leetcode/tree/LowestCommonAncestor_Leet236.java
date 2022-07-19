@@ -23,7 +23,7 @@ public class LowestCommonAncestor_Leet236 {
             return root;
         }
         TreeNode left = lowestCommonAncestor(root.left, p, q);
-        TreeNode right = lowestCommonAncestor(root.left, p, q);
+        TreeNode right = lowestCommonAncestor(root.right, p, q);
         if (left != null && right != null) {
             return root;
         }

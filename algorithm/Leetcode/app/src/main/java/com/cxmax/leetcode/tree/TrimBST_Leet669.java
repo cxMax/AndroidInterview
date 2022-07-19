@@ -24,15 +24,15 @@ public class TrimBST_Leet669 {
         }
         // 根节点，小于最小区间， 那就看比他大的右节点
         if (root.val < low) {
-            trimBST(root.right, low, high);
+            return trimBST(root.right, low, high);
         }
         // 那就看比他小的 左节点
         if (root.val > high) {
-            trimBST(root.left, low, high);
+            return trimBST(root.left, low, high);
         }
         // 再确定左、右两个节点
-        trimBST(root.left, low, high);
-        trimBST(root.right, low, high);
+        root.left = trimBST(root.left, low, high);
+        root.right = trimBST(root.right, low, high);
         return root;
     }
 
