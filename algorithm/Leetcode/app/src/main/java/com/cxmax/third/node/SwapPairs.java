@@ -1,55 +1,60 @@
-package com.cxmax.selftest.node;
+package com.cxmax.third.node;
 
-import com.cxmax.leetcode.node.ListNode;
 
 /**
- *
  * 24. 两两交换链表中的节点
- *
+ * <p>
  * https://leetcode-cn.com/problems/swap-nodes-in-pairs/
- *
+ * <p>
  * 输入：head = [1,2,3,4]
- *
+ * <p>
  * 输出：[2,1,4,3]
- *
- * Created by caixi on 2022/1/20.
+ * <p>
+ * Created by caixi on 2022/7/22.
  */
 public class SwapPairs {
 
     /**
-     * 比较技巧的解法， 双指针 + 虚拟节点
-     * 在实际做题中，固定的算法
+     * 链表，两两交换，尽可能去理解，算法
+     * 1，2，3，4
      *
+     * 1. 构造虚拟节点， -1位
+     * 2. 构造prev和temp两个指针
+     * 3. prev指向虚拟节点
+     * 4. tmp 指向 3
+     * 遍历交换，
+     * 1. 2->1
+     * 2. 1->3
+     * 3. 3->2
+     * 4. 往前进位，相当于i++，只是双指针的进位，prev节点和head
      *
-     * 1. 先 2->1, 2134
-     * 2. 再 1->3, 2314
-     * 3. 在 3->2, 3214
-     * 4. 在进位
+     * 5. 最后返回头节点，
      *
      * @param head
      * @return
      */
     public ListNode swapPairs(ListNode head) {
-        // 先构造虚拟节点
         ListNode dummy = new ListNode(0);
         dummy.next = head;
-        // 0
+        // 构造双指针
         ListNode prev = dummy;
-        // 循环条件，从虚拟节点开始的下一位，下下位不能为null， 就跟上面写的固定算法一致
+        // 开始遍历，交换顺序
         while(prev.next != null && prev.next.next != null) {
+            // todo caixi 2022-7-22 , 固定算法容易写错， 就是 2-1， 1-3， 3-2
             // 3
             ListNode tmp = head.next.next;
-            // 先2->1
+            // 开始交换
+            // 2-1
             prev.next = head.next;
-            // 在1->3
+            // 1-3
             head.next.next = head;
-            // 在3->2
+            // 3-2
             head.next = tmp;
             // 进位
             prev = head;
             head = head.next;
         }
-        // 返回头节点
         return dummy.next;
     }
+
 }
