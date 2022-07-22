@@ -25,6 +25,8 @@ public class RemoveNthFromEnd {
      * 4. 快、慢指针都进步
      * 5. 快指针到头的时候，慢指针删除下一位即可
      *
+     * 返回头节点
+     *
      *
      * @param head
      * @param n
@@ -44,6 +46,7 @@ public class RemoveNthFromEnd {
             fast = fast.next;
         }
         slow.next = slow.next.next;
+        return dummy.next;
     }
 
 }
