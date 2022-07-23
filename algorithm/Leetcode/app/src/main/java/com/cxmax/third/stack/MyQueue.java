@@ -20,6 +20,7 @@ public class MyQueue {
      * 用两个栈来实现队列，先进先出；
      *
      * 1. 进一个栈，出一个栈
+     * 1. 还是记住，出栈和queue的元素顺序是相反的，
      *
      */
     public MyQueue() {
