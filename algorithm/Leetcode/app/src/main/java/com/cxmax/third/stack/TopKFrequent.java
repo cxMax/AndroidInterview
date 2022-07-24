@@ -59,6 +59,7 @@ public class TopKFrequent {
             }
         }
         int[] result = new int[k];
+        // todo caixi 2022-7-24 出现频率最低的在前面，出现频率最高的在queue后面
         for (int i = k - 1; i >= 0; i--) {
             result[i] = queue.poll().getKey();
         }
