@@ -618,6 +618,582 @@ synchronized(2) {
 * 第二看system_server这个进程, 是否是因为其他进程原因影响了app进程的anr
 * 看log上下文, 主要看anr发生前（AMS打开了哪些界面、有没有系统服务挂掉的问题、是否是主线程日志打印占用cpu资源导致的）
 
+### Android framework源码相关
+
+#### Binder机制
+
+* C/S架构：
+	* 三层 ： java 、c++ 、kennel驱动层
+
+* Client : proxy -> BinderProxy -> BpBinder
+* Server : Stub -> Binder -> BBinder
+
+* 通信方式 ：
+	* c++层面，BpBinder 通过transcat发送请求
+	* c++层面，BBinder，通过onTranscat处理请求
+
+* 通过parcel传递对象。
+
+* 一次数据拷贝，物理内存-》内核-〉用户空间
+
+* 服务都是注册到ServiceManager里面，有个 Java缓存sCache
+
+
+* TranscationTooLargeException
+	* Binder传递大数据，会导致TranscationTooLargeException
+
+* 出现场景：
+	* bundle传递bitmapbitmap是parcel
+
+* bundle setAllowFds(false)主要是这个，
+* 打开了的话， 直接拷贝内存地址，就不会要不错了。
+
+* 适用的方案：
+	* contentprovider、memory， 用的是共享内存。 
+	* 不是binder传输， binder传输的话， 要打开setAllowFds描述符
+
+#### IPC方式
+* 管道（半双工，单向）
+	* 单读、单写
+	* 用于父子进程
+* 场景:
+1. looper::looper 6.0以后用的eventfd
+	* 缺点：传输数据量不能太大，至少两次内存拷贝
+	* 2次数据拷贝，应用层-》内核，内核-〉应用层
+
+* Socket（全双工，即可读写）
+	* 两个进程通信
+* 场景：
+	1. zygote入口函数，用于进程创建
+	* 缺点：传输数据量不能太大，至少两次内存拷贝
+
+* 共享内存（很快，不需要多次）
+	* 两个进程也是没关系
+* 场景：
+	1. MemoryFile -> native_mmap映射到内存空间
+	* 优点：
+		* 进程大数据传输
+
+* 信号（单向，发出去之后怎么处理他不知道）
+	* 只能带信号，不能带出参数
+	* 知道进程pid就能发信号，也可以一次给一群进程发信号
+	* 场景：
+		* 杀进程的时候会发信号
+
+* Binder
+	* 内存拷贝1次
+
+### 手机开机流程
+* zygote进程启动
+	* （通过c++调用的main函数）
+* zygoteInit.java main函数
+	1. 资源预加载，系统class文件、系统资源文件、系统动态库
+	2. 启动systemserver进程（也是systemserver的main函数）
+	3. 创建zygotesocket服务，是用来接受AMS应用创建的请求
+	4. 进入阻塞状态，等待请求，等待ams申请创建应用进程的请求
+* Systemserver main函数
+	1. 启动引导服务(ams、pms等，一共17个)
+	2. 启动核心服务(电池管理服务、usagestate服务等等，一共9个)
+	3. 启动其他一般服务（蓝牙服务、电话服务等等，一共90个）
+* Ams::systemReady() 去启动launcher服务
+
+### SystemServer启动流程
+* SystemServer进程是android中一个很重要的进程由Zygote进程启动；
+* SystemServer进程主要用于启动系统中的服务；
+* SystemServer进程启动服务的启动函数为main函数；
+* SystemServer在执行过程中首先会初始化一些系统变量，加载类库，创建Context对象，创建SystemServiceManager对象等之后才开始启动系统服务；
+* SystemServer进程将系统服务分为三类：boot服务，core服务和other服务，并逐步启动
+* SertemServer进程在尝试启动服务之前会首先尝试与Zygote建立socket通讯，只有通讯成功之后才会开始尝试启动服务； 其他服务都是通过binder进行通信的
+* 创建的系统服务过程中主要通过SystemServiceManager对象来管理，通过调用服务对象的构造方法和onStart方法初始化服务的相关变量；
+* 服务对象都有自己的异步消息对象，并运行在单独的线程中；
+
+
+### launcher启动流程
+* Ams::systemReady()  启动launcher入口
+* activitytaskmanagerservice.localservice::startHomeOnAllDisplay
+	1. android 10引进的RootAcvtityContainer::StartHomeOnDisplay
+	1. 调用PMS查询符合Launcher应用条件的activity intent（其实主要就是配置intent为home和default标记）
+	* PackageManagerService，该服务也是android系统中一个比较重要的服务，包括多apk文件的安装，解析，删除，卸载等等操作。
+
+
+* ActivityStarter::startActivityUnchecked()
+	1. 清单文件注册校验，启动权限检查
+	2. 根据启动模式和intent.flag计算出该activity所属的任务栈并加入，单此刻并不会显示。
+
+
+* ActivityStack::resumeTopActivityInnerLock()
+	1. 启动activity之前会把当前可见的activity暂停。计算待启动的activity所属进程是否存在
+
+
+* ActivityStackSuperVisor::startSpecificActivityLocked
+	1. 进程如果存在就启动activity。
+	2. 如果进程不存在就创建进程
+
+
+* Ams::startProcess
+	1. 委派给ProcessList来负责进程的创建
+
+
+* ProcessList::startProcessLocked
+	1. 建立连接zygote进程的socket
+	2. 把进程创建所需要的信息通过socket发送出去
+	3. 通过ActivityThread来创建进程
+
+* 总结：
+
+* Intent的显式启动和隐式启动
+	* 隐式 - IntentFilter配置的action等参数去启动
+	* 显式 - 通过类名去启动
+
+* Launcher的启动流程
+
+	* Zygote进程 --> SystemServer进程 --> startOtherService方法 --> ActivityManagerService的systemReady方法 --> startHomeActivityLocked方法 --> ActivityStackSupervisor的startHomeActivity方法 --> 执行Activity的启动逻辑，执行scheduleResumeTopActivities()方法。。。。
+
+	* 因为是隐式的启动Activity，所以启动的Activity就是在AndroidManifest.xml中配置catogery的值为：
+	* public static final String CATEGORY_HOME = "android.intent.category.HOME";
+	* 可以发现android M中在androidManifest.xml中配置了这个catogory的activity是LauncherActivity，所以我们就可以将这个Launcher启动起来了
+
+	* LauncherActivity中是以ListView来显示我们的应用图标列表的，并且为每个Item保存了应用的包名和启动Activity类名，这样点击某一项应用图标的时候就可以根据应用包名和启动Activity名称启动我们的App了。
+
+
+### 应用进程启动流程
+1. 我们可以通过启动四大组件的方式启动应用进程，在应用进程没有启动的时候，如果我们通过启动这些组件，这时候系统会判断当前这些组件所需要的应用进程是否已经启动，若没有的话，则会启动应用进程
+
+2. Instrumentation - 当我们在执行对Activity的具体操作时，比如回调生命周期的各个方法都是借助于Instrumentation类来实现的
+
+3. ActivityThread - 进程的启动方法就是ActivityThread的main方法
+
+
+### 系统启动并解析Manifest的流程
+1. android系统启动过程中解析Manifest的流程是通过PackageManagerService服务来实现
+2. SystemServer启动boot服务，初始化PackageManagerService的时候，解析了系统中几个apk的安装目录（“data”、“app”）
+3. 创建PackagerParser去扫描Manifest每一个节点
+4. 保存到Package内存里面
+
+
+### 系统apk安装流程
+1. 代码中执行intent.setDataAndType(Uri.parse(“file://" + path),"application/vnd.android.package-archive");可以调起PackageInstallerActivity；
+2. PackageInstallerActivity主要用于执行解析apk文件，解析manifest，解析签名等操作；
+3. InstallAppProcess主要用于执行安装apk逻辑，用于初始化安装界面，用于初始化用户UI。并调用PackageInstaller执行安装逻辑；
+4. InstallAppProcess内注册有广播，当安装完成之后接收广播，更新UI。显示apk安装完成界面；
+
+
+### Activity启动流程
+
+* A启动B : 
+	* onPause(a) -> onCreate(b) --> onStart(b) --> onResume(b) --> onStop(a)
+* 然后杀掉B : 
+	onPause(b)) -> onRestart(a)) -> onStart(a)) -> onResume(a)) -> onStop(b)) -> onDestory(b)
+
+
+#### Activity启动流程中，一些类的关系 ：
+
+* ActivityManagerNative.getDefault() -> AMS本地代理对象，一个单例模式
+
+* IApplicationThread也是一个Binder对象，它是ActivityThread中ApplicationThread的Binder client端
+
+* 每个应用进程对应着一个Instrumentation和一个ActivityThread，Instrumentation就是具体操作Activity回调其生命周期方法的
+
+#### 启动流程
+
+1. Activity的启动流程涉及到多个进程之间的通讯这里主要是ActivityThread与ActivityManagerService之间的通讯
+2. ActivityThread向ActivityManagerService传递进程间消息通过ActivityManagerNative，ActivityManagerService向ActivityThread进程间传递消息通过IApplicationThread
+3. ActivityManagerService接收到应用进程创建Activity的请求之后会执行初始化操作，解析启动模式，保存请求信息等一系列操作。
+4. ActivityManagerService保存完请求信息之后会将当前系统栈顶的Activity执行onPause操作，并且IApplication进程间通讯告诉应用程序继承执行当前栈顶的Activity的onPause方法；
+5. ActivityThread接收到SystemServer的消息之后会统一交个自身定义的Handler对象处理分发；
+6. ActivityThread执行完栈顶的Activity的onPause方法之后会通过ActivityManagerNative执行进程间通讯告诉ActivityManagerService，栈顶Actiity已经执行完成onPause方法，继续执行后续操作；
+7. ActivityManagerService会继续执行启动Activity的逻辑，这时候会判断需要启动的Activity所属的应用进程是否已经启动，若没有启动则首先会启动这个Activity的应用程序进程；
+8. ActivityManagerService会通过socket与Zygote继承通讯，并告知Zygote进程fork出一个新的应用程序进程，然后执行ActivityThread的main方法；
+9. 在ActivityThead.main方法中执行初始化操作，初始化主线程异步消息，然后通知ActivityManagerService执行进程初始化操作；
+10. ActivityManagerService会在执行初始化操作的同时检测当前进程是否有需要创建的Activity对象，若有的话，则执行创建操作；
+11. ActivityManagerService将执行创建Activity的通知告知ActivityThread，然后通过反射机制创建出Activity对象，并执行Activity的onCreate方法，onStart方法，onResume方法；
+12. ActivityThread执行完成onResume方法之后告知ActivityManagerService onResume执行完成，开始执行栈顶Activity的onStop方法；
+13. ActivityManagerService开始执行栈顶的onStop方法并告知ActivityThread；
+14. ActivityThread执行真正的onStop方法；
+
+### Activity调用finish的销毁流程
+* Activity A 启动 Activity B : 
+	* onPause(a) --> onCreate(b) --> onStart(b) --> onResume(b) --> onStop(a) 
+* Activity B 调用 finish : 
+	* onPause(b)) -> onRestart(a)) -> onStart(a)) -> onResume(a)) -> onStop(b)) -> onDestory(b)
+
+
+### Context创建流程
+1. 应用进程启动 --> 创建Instrumentation --> 创建Application对象 --> 创建Application相关的ContextImpl对象；
+2. ActivityThread.main方法—> ActivityManagerService.bindApplication方法 --> ActivityThread.handleBindApplication --> 创建Instrumentation，创建Application；
+3. 每个应用进程对应一个Instrumentation，对应一个Application；
+4. Instrumentation与Application都是通过java反射机制创建；
+5. Application创建过程中会同时创建一个ContextImpl对象，并建立关联；
+
+
+### Activity布局加载流程
+
+#### Activity生命周期中不调用supper会有什么问题吗？
+* 会爆SuperNotCalledException，主要是一个mCalled成员变量
+
+* 一个Activity对应着一个PhoneWindow对象
+
+* Activity的展示界面的特性是通过Window对象来控制的；
+
+* 每个Activity对象都对应这个一个Window对象，并且Window对象的初始化在启动Activity的时候完成，在执行Activity的onCreate方法之前；
+
+* 每个Window对象内部都存在一个FrameLayout类型的mDector对象，它是Acitivty界面的root view；
+
+* Activity中的window对象的实例是PhoneWindow对象，PhoneWindow对象中的几个成员变量mDector，mContentRoot，mContentParent都是View组件，它们的关系是：mDector --> mContentRoot --> mContentParent --> 自定义layoutView
+
+* LayoutInflater.inflate主要用于将布局文件加载到内存View组件中，也可以设定加载到某一个父组件中；
+
+* 典型的Activity的onCreate方法中需要调用super.onCreate方法和setContentView方法，若不调用super.onCreate方法，执行启动该Activity的逻辑会报错，若不执行setContentView的方法，该Activity只会显示一个空页面。
+
+
+### Activity布局加载流程
+* Activity执行onResume之后再ActivityThread中执行Activity的makeVisible方法。
+
+* View的绘制流程包含了测量大小，测量位置，绘制三个流程；
+
+* Activty的界面绘制是从mDector即根View开始的，也就是从mDector的测量大小，测量位置，绘制三个流程；
+
+* View体系的绘制流程是从ViewRootImpl的performTraversals方法开始的；
+
+* View的测量大小流程:performMeasure --> measure --> onMeasure等方法;
+
+* View的测量位置流程：performLayout --> layout --> onLayout等方法；
+
+* View的绘制流程：onDraw等方法；
+
+* View组件的绘制流程会在onMeasure,onLayout以及onDraw方法中执行分发逻辑，也就是在onMeasure同时执行子View的测量大小逻辑，在onLayout中同时执行子View的测量位置逻辑，在onDraw中同时执行子View的绘制逻辑；
+
+* Activity中都对应这个一个Window对象，而每一个Window对象都对应着一个新的WindowManager对象（WindowManagerImpl实例）；
+
+### MeasureSpec
+1. EXACTLY
+2. AT_MOST
+3. UNSPECIFIED
+
+* 首先绘制ViewGroup，再去绘制子View
+* 通过遍历的方式去绘制的子view。并且measureSpec是向下传递的
+
+### onSaveInstanceState的执行时机
+
+* onSaveInstanceState方法是Activity的生命周期方法，主要用于在Activity销毁时保存一些信息。
+
+* 当Activity只执行onPause方法时（Activity a打开一个透明Activity b）这时候如果App设置的targetVersion大于android3.0则不会执行onSaveInstanceState方法。
+
+* 当Activity执行onStop方法时，通过分析源码我们知道调用onSaveInstanceState的方法直接传值为true，所以都会执行onSaveInstanceState方法。
+
+### onLowMemory的执行流程
+* 系统在JNI层会时时检测内存变量，当内存过低时会通过kiilbackground的方法清理后台进程。
+
+* 经过层层的调用过程最终会执行Activity、Service、ContentProvider、Application的onLowMemory方法。
+
+* 可以在组件的onLowMemory方法中执行一些清理资源的操作，释放内存防止进程被杀死。
+
+
+## Android Java一些基础
+### 线程通信
+> 共享内存(JMMjava内存模型, volatile关键字) 和 发送消息(handler)
+
+
+* 共享内存 : 线程之间通过读写内存中的公共状态来隐式通信
+* 消息传递 : 在消息传递的并发模型里, 线程通过明确的发送消息来显示进行通信
+
+
+### Http相关的面试题
+
+* 请求方法 ：
+	* get - 获取资源，对服务器数据不修改，不发送body
+	* post - 增加/修改资源，发送内容会放在body里面
+	* put - 修改资源，
+	* delete - 删除资源
+	* head - 获取资源， 返回值没有body
+
+* header里面的参数
+	* content-type ： 三种类型：本文、文件、表单
+	* content-length：长度
+	* user-agent：浏览器/手机
+	* range/accept-range：断点续传
+	* cookie：
+	* authorization：授权
+	* accept-charset/encoding：客户端接收字符集
+	* content-encoding：客户端接受编码格式
+	* cache相关：
+	* last- modify
+
+### Tcp/Ip七层协议模型
+* 应用层 - http/ftp/dns
+* 表示层 - 收到数据翻译成机器语言发送给下一层
+* 会话层 - 
+* 传输层 - tcp三次握手/四次挥手，udp协议
+* 网络层 - ip地址
+* 数据链路层 - 以太网、Wi-Fi
+* 物理层 - 网络硬件进行传输
+
+
+### 三次握手、四次挥手过程理解
+
+* 三次握手
+	* 第一次握手 - client发送syn报文，等待服务器确认
+	* 第二次握手 - server发送syn+ack包，进入recev状态
+	* 第三次握手 - client收到syn+ack包，向server发送ack包确认。
+	* 就此，双方进入建立连接状态
+
+* 四次挥手
+	* 第一次挥手 - client发送fin释放报文，
+	* 第二次挥手 - server收到fin报文，发送ack报文，并进入关闭close-wait等待状态
+	* 第三次挥手 - client收到ack报文，进入fin-wait终止等待，等待服务器发送fin释放报文
+	* 第四次挥手 - server发送fin释放报文，client收到并，发出ack报文/进入time-wait，经过2*msl（最长报文段寿命）释放链接。 server只要收到ack报文，就立刻clsoe链接了
+
+* 为什么是三次握手、四次挥手？
+	* 因为server收到fin不会立刻关闭，先回复ack报文，等待所有报文都发送完了，才会发送fin报文
+
+### TCP和UDP的区别
+* TCP ： 面向连接、面向字节流、保证数据顺序、正确性，连接稳定，网页浏览、接口访问都是tcp协议传输
+* UDP ：面向无连接、基于数据报、可能丢包、数据传输很快，适用于直播、游戏
+
+### TCP与HTTP
+
+#### 一个tcp连接是否会在http请求完成后断开 ?
+* 默认不会断开，只有在http请求写明connection:close才会断开
+
+#### 一个tcp连接可以对应多少个http请求？
+* 1个tcp对应多个http请求
+
+#### 一个tcp连接中的http请求可以一起发送吗？
+* http1.1协议，不能，一个tcp连接顺序进行http请求处理
+* http2.0协议，可以，multiplexing
+
+#### http1.1如果提升加载效率？
+1. 和多个服务器建立tcp连接
+2. 在同一连接上顺序处理多个请求
+
+#### 同一个host的tcp连接有没有数量限制？
+1. Chrome最多6个连接，取决于浏览器
+2. 如果是https在同一个域名下，会写上用http2的协议，multiplexing
+
+### HashMap相关面试题
+
+
+#### 1.HashMap简介
+* HashMap - 单链表数组，key值可以为null，非有序（LinkedHashMap）、非同步（ConcurrentHashMap）
+
+#### 2.HashMap什么时候扩容
+* resize的条件是 = 初始容量 * 扩容因子
+
+#### 3.HashMap的put原理
+* A）先判断是否需要resize
+* B）计算出存储位置table[i]
+* C）判断hash值是否一致，如果一致做replace操作
+* D）如果不一致，则出现了hash冲突，插入单链表到链表最后位置，单链表长度超过8就转化为红黑树
+
+#### 4.HashMap的get原理
+* a）计算出hash值
+* B）计算出table[I]的值，判断存储位置是否有元素存在
+* C）比较table[i]头节点的hash值是否一致，否则就按照红黑树/链表的方式进行遍历
+
+#### 5.Hash冲突时什么鬼？怎么解决的？
+* Hash值取模的时候，会出现冲突，比如说，元 素 A 的 h a s h 值 为 9 ，元 素 B 的 h a s h 值 为 1 7 。哈 希 表 N o d e < K , V > [ ] table 的长度为 8， 取模后都是1
+
+* 解决方式：拉链法， 就是单链表插入最后一位。
+
+#### 6.HashMap的容量为什么一定是2的n次方？
+* 在我们自己初始化设定HashMap大小的时候，无论设置为多少，hashmap会将容量大小设置成最接近2的n次方的数
+
+* 为什么这么做呢？
+	* 取模的运算消耗很大，位运算效率高，并且hash冲突会比较小。
+
+#### 7.负载因子为什么时0.75
+
+* 负载因子越大，表示装载程度越高，能容量更多的元素，因此出现hash碰撞的几率会增大，链表会越拉越长，查询效率就会降低
+
+* 负载因子越小，表示越稀疏，会造成空间的浪费，但是此时查询效率最高。
+
+
+#### 8.HashMap和HashTable的区别
+* A）HashMap允许null值，HashTable则不允许null，会报空指针异常
+* b）hashmap初始化16，hashmap取2倍，容量一定是2的n次方；hashtable初始化11，扩容2倍+1
+* C）计算存储方式也就是table【i】那个i的取值不一样；hashmap是hash值与数组长度取模；hastable不是模运算，取余数
+* d）线程安全，但是hashtable不如concurrenthashmap
+
+#### 9.为什么hashmap多线程不安全
+* A）多线程同时put、remove操作，都会导致modcount改变，当modcount != exceptedmodcount 的时候，就会抛出异常
+* B）多线程，resize扩容的时候，也可以发生死循环
+
+#### 10.hashmap的key值用不变的数据类型，string int等
+
+### JMM内存模型
+* 乱序 优化可以保证在单线程下该执行结果与顺序执行的结果是一致的，但不保证程 序中各个语句计算的先后顺序与输入代码中的顺序一致
+
+* 所有变量都存储在主内存 ， 每条线程都有自己的工作内存（保存了该线程使用到的变量的主内存中的共享变量的副本拷贝）
+
+* 主内存拷贝到工作内存8个基本操作（lock、unlock、read、load、use、assign、store、write）
+
+* Java内存交互基本操作的三种特性
+	1. 原子性 - 多线程一起执行，一个操作一旦执行、就不会被其他线程干扰
+	2. 可见性 - 多个线程访问同一个变量，一个线程修改了变量值，其他线程能够立刻看到修改后的值
+	3. 有序性 - 
+		* 线程内 - as if serial 串行执行代码
+		* 线程间 - 同步代码块和volatile字段操作维持有序
+
+* happens-before
+	* 单线程 -  靠前的字节码结果对靠后的字节码可见， 但执行顺序不一定一致
+	* 多线程 - 做了同步， a线程的结果对b线程结果可见， a线程执行先于b线程
+
+* 内存屏障
+	* 常见有4种内存屏障
+	* Load 和 Store的组合 
+	* 禁止处理器发生重排序保证有序性
+	* 常见的有volatile、synchronized、unsafe来使用内存屏障
+
+### volatile关键字
+1. 保证可见性
+	* 写 - 1.改变工作内存；2.把工作内存刷新到主内存
+	* 读 - 1.主内存刷新到工作内存；2.在改变工作内存
+2. 禁止进行指令重排序
+	* 保证执行顺序， 指令优化的时候，不能重排序
+
+* 原理 ：
+	* 写 : StoreStore（任何读写，在写之前，优先别提交） -> 写 -> storeLoad（写对其他线程可见）
+	* 读 : LoadLoad（读取最新值） -> 读 -> LoadStore（写的更新对读可见）
+
+* 64位基础数据结构 double long
+
+### final关键字
+* 可见性是指 - 一旦修饰的变量初始化完成，其他线程无需同步，可以正确看见final字段的值。 一旦初始化完成，final变量立刻写回到主内存
+
+### synchronized包裹的代码区域
+* 读数据 - 从主内存读取。保证读诗最新的
+* 写数据 - 离开代码块，就会把当前线程的数据刷新到主内存中去
+
+### JVM相关
+
+#### 1.ART机制和Dalvik机制
+
+* 在 Dalvik 下，应用每次运行的时候，字节码都需要通过即时编译器(just in time ，JIT)转
+换为机器码，这会拖慢应用的运行效率。
+
+* 而在 ART 环境中，应用在第一次安装的时候，字节码就会预先编译成机器码，极大的提高 了程序的运行效率，同时减少了手机的耗电量，使其成为真正的本地应用。这个过程叫做预 编译(AOT,Ahead-Of-Time)。这样的话，应用的启动(首次)和执行都会变得更加快速。
+
+* 缺点 - 包体积更大、安装时间变长
+
+### 2.JVM内存结构
+* 线程共享区域 ：
+	* 方法区 ：加载的类信息、常量、静态变量
+	* 堆 ： 主要存放对象实例和数组。
+* 线程私有区域：
+	* 虚拟机栈 - 每个方法在执行时，都会创建一个栈帧用用于存储局部变量表，生命周期，是方法执行结束，一个栈帧从虚拟机栈中入栈出栈的过程。这个是位java方法（字节码）提供的服务
+	* 本地方法栈 - 虚拟机使用到的native方法服务的。
+	* 程序计数器 - 通过改变计数器的值来选取下一个要执行指令的字节码。 不会有OutOfMemoryError
+
+### 对象的创建
+#### 垃圾回收算法
+* 引用计数法 - 解决不了相互引用的问题
+* 可达性分析法 
+	* gc root对象 
+		1. 方法区中，静态属性引用的对象
+		2. 方法区中，常量的引用对象
+		3. 虚拟机栈中引用的对象
+		4. 本地方法栈中jni引用的对象
+
+### sychronized 和 lock
+#### Sychronized 
+* 存在层次 - jvm
+* 锁的释放 - 执行完同步代码块，释放；线程发生异常，释放；
+* 锁的获取 - 一个线程获取到锁，其他线程一直等待；
+* 锁的状态 - 无法判断
+* 锁类型 - 可重入、不可中断、非公平
+* 性能 - 少量同步；
+
+* 原理 
+	* 编译成字节码（class文件），sychronized对应的代码块其实就是添加了monitorenter和monitorexit（有两个，一个是正常执行完毕，一个是异常）。 当程序执行到monitorenter和monitorexit的时候，锁计数器会+1，-1。没有获取到锁，就等待。
+
+#### Lock
+* 存在层次 - jdk
+* 锁的释放 - try - finally
+* 锁的获取 - 不用等待，可以尝试获取
+* 锁的 状态 - 可以判断
+* 锁类型 - 可冲入、可判断，公平、非公平
+* 性能 - 大量同步
+
+* 原理 
+	* volatile和cas操作实现的
+
+#### Sychronized 1.8以后的优化点 ：
+1. 线程自旋和适应性自旋 
+	* 设置循环，循环10次后，在挂起
+2. 锁消除
+	* 不存在线程安全问题的时候，就会把这个同步锁消除
+3. 锁粗化
+4. 轻量级锁
+5. 偏向锁
+
+### Activity启动模式
+* Standard : 标准模式，都会创建实例
+* SingleTop : 在栈顶就复用
+* SingleTask : 栈之上的实例都会被移除掉
+* SingleInstance : 单独的栈
+
+
+### onSavedInstanceState的调用时机
+
+* 未经许可的销毁 - 比如屏幕旋转、语言切换
+* onSavedInstanceState(Bundle bundle)通常和 onRestoreInstanceState(Bundle bundle)不会成对出现
+* onRestoreInstanceState 这玩意不太好触发，给大家提个好办法，横竖屏切换 的时候100%会触发
+
+### 断点续传
+* Java有提供一个类，RandomAccessFile，主要是seek api，记录下载的二进制文件的点，第二次从这里开始io操作
+
+### Standard、SingleTask、SingleTop、SingleInstance
+* Standard - 每次都创建新的实例进入task顶部
+* SingleTop - 如果再栈顶，就调用onNewIntent（）
+* SingleTask - 栈中，在它之上的都会被弹出；
+* SingleInstance - 这个栈中只存在这一个实例，如果已存在这个实例，就调用onNewIntent（）的方法
+
+* 当一个在一个栈中启动（Standard、SingleTop、SingleTask）再去启动 SingleInstance 这么一个堆栈，在启动一个activity。 此时返回？
+
+	* 返回的还是按照之前那个栈的顺序，先入后出去返回。最后才是SingleInstance这个堆栈。
+
+* A启动B的问题 
+	* A pause - B create - B Start - B Resume - B Stop
+
+* B finish的问题
+	* B Pause - A ReStart - A Start - A Resume - B Stop - B Destroy
+
+
+### OKhttp
+
+* 线程池队列
+	* 用的双端队列ArrayDeque，而没有用LinkedList。
+	* ArrayDeque 底层是 数组；
+	* LinkedList 底层是 单链表；
+	* 在垃圾回收时，使用数组结构的效率要优于链表
+
+* 线程池用的io线程池
+	* newCachedThreadPool - 0，max，队列用的是SynchronousQueue（每当有任务添加进来时会立即触发消费，即每次插入操作一定伴随一个移除操作）
+
+* 只会当里面没有任务的时候，才能往里面放任务，当放完之后，只能等它的任务被取走才能放
+
+* 责任链模式
+
+* 拦截器顺序
+	* 应用拦截器
+	* RetryAndFollowUpInterceptor - 重试和重定向的处理
+	* BridgeInterceptor - 主要是http请求头，header参数的填充
+	* CacheInterceptor - 负责cache缓存的处理，有缓存就直接返回缓存
+	* ConnectInterceptor - 建立tcp连接
+	* 网络拦截器
+	* CallServerInterceptor - 负责真实的网络io读取response
+
+* 应用拦截器 和 网络拦截器 
+	* 应用拦截器 - 处理原始请求， 可以添加自定义header
+	* 应用拦截器只会触发一次，网络拦截器，就表示真正进行了一次网络请求。
+
+
+* 重定向的处理？
+	* 主要是实现RedirectInterceptor的拦截器，处理对应300几重定向的逻辑
+
+* 在 Dispatcher 中，默认支持的最大并发连接数是64，每个 host 最多可以有5个并发请求
+
+
 
 
 
