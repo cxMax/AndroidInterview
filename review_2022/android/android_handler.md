@@ -72,6 +72,25 @@
 
 loop()死循环 -》messageQueue.next，这个函数也是个死循环 -〉会去调用native的nextPollOnce函数（检查消息队列有没有消息，如果有消息就返回，没有消息就阻塞到这里）-》会去调用native的 looper::pollOnce函数 -> 关键最后还是会去调用native looper::pollInner::epoll_wait（也就是等待消息）
 
+#### ThreadLocal
+* 一个线程只有一个ThreadLocal , 每个线程只存在一个Looper
+* ThreadLocal依附于创建类的持有, 建立在堆内存中
+* 线程如果要访问ThreadLocal的值, 可以使用InheritableThreadLocal
+* ThreadLocal不会产生内存泄漏, 因为ThreadLocalMap在选择ThreadLocal的引用的时候 , 是对其实例的弱引用
+
+* ThreadLocal原理
+	* 内部是一个Map，Map是一个数组来实现的
+	* 保存threadlocal/value的映射关系。
+	* 这个表保存的threadlocal对象是一个弱引用关系
+	* map的实现，是一个数组，
+	* 通过hash值进行取模寻址，
+	* 当出现hash冲突的时候，是通过拉链法，冲突点，下一个null数组位置设置进去
+
+#### Looper.prepare() 
+* 应用进程在启动的时候，ActivityThread#main方法，Looper.prepareMainLooper()，主线的looper就已经初始化好，用的时候直接用。
+* 否则，子线程需要调用looper#prepare
+
+
 ### handler机制原理
 1. Handler机制原理是使用pipe管道（c++）
 2. 主现场没有消息处理时，阻塞在管道的读端（nativePollOnce）
@@ -109,4 +128,9 @@ framework的WatchDog，BlockCanary（一个开源库）
 #### Android源码使用
 * GcIdler。 主线程第一次gc的时候，回调用一次idlerhandler执行一次gc
 * UIAutomator源码。 waitforIdle() wait 和 notify去唤醒。
+
+
+
+## 引用
+[深入理解Handler原理](https://keeplooking.top/2020/04/18/Android/hander/)
 
