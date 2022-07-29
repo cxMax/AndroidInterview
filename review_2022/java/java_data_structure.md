@@ -16,7 +16,7 @@
 	1. 内存中连续，因为是静态分配内存。
 	2. 数组的缺点是，当数组长度发生变化时，原有的元素需要经过copy到新的数组中，这样性能有较大的损耗
 
-##链表
+## 链表
 * 链表几种类型 ：单链表、双链表、循环链表
 * 链表的存储方式：数组是在内存中是连续分布的，但是链表在内存中可不是连续分布的。
 
@@ -120,11 +120,14 @@
 
 ### HashMap : 
 * HashMap中的key-value都是存储在Entry数组中的, Node[] table。
-* Node 这个数据结构是个单项链表。
+* Node 这个数据结构是个单链表。
 * HashMap将“key为null”的元素都放在table的位置0处
 	* “拉链法” - 当命中到同一位置之后, 会以链表的形式向后面链接, 在1.8, 当链表过长时, 会转化为红黑树, 增加查询的效率
 	* 拉链法 - 主要为了解决hash冲突
 	* HashMap在并发使用场景发生死循环 或 数据丢失。主要发生场景实在扩容的时候， 产生循环链表，出发死循环 
+
+* HashMap的查找效率最快，时间复杂度为o(1)， 是因为hash算法，存储的key值直接指向存储的数组的位置，用到了模运算，所以HashMap的容量大小为2的幂次方
+* 最坏的打算，是存储变为单链表，时间复杂度一下退化至o(n)，为了解决查询效率，容量大小超过8的时候，会转化为红黑树，查找效率为o(logn)
 
 
 ### HashTable : 
@@ -187,8 +190,58 @@
 * 问如何实现有序的 ? 
 	* 其iterator遍历还是调用的TreeMap的遍历, 通过TreeMap实现有序遍历
 
+## Android特有的数据结构
 
+### ArrayMap
+> 总体来讲，内存使用更优（相比于HashMap），数据小，使用场景比较高频
+> 如果key值，是int类型，推荐使用SparseArray，内存开销缩小1/3
+
+#### 原理
+* 数据结构使用的数组
+	* mHashes是一个记录所有key的hashcode值组成的数组，是从小到大的排序方式； [key1.hash, key2.hash]
+	* mArray是一个记录着key-value键值对所组成的数组，是mHashes大小的2倍； [key1, value1, key2, value2]
+* 缓存机制（二级缓存，内部缓存2个ArrayMap对象）
+	* 容量大小4和8，为了减少频繁地创建和回
+* 扩容机制
+	* 按照4、8、1.5倍容量，来扩容的
+	* remove和clear时，也会有收紧策略，对应也是4、8、1.5倍容量
+	* 扩容的处理方式，还是数组拷贝
+* 查找采用的二分查找
+* 就直接使用的hashcode，出现hash冲突的时候，采用线性探测法，往前往后查找
+
+### ArraySet
+> 和ArrayMap几乎一致
+ 
+* 不一致的地方 : 两个数组，一个存value，另一个存key
+
+### SparseArray
+* 数据结构使用的也是数组
+	* 一个保存key，一个保存value。 没有保存hash值，因此缩小了1/3
+
+## ArrayMap、HashMap、SparseArray比较
+
+* 数据结构
+	* 数组 : ArrayMap，SparseArray
+	* 数组 + 单链表 + 红黑树 : HashMap
+* 内存 :
+	* SparseArray > ArrayMap > HashMap
+	* 容量的利用率比ArrayMap低，整体更消耗内存
+* 性能方面 :
+	* HashMap > SparseArray > ArrayMap
+	* ArrayMap添加删除涉及到数组移动
+
+* 缓存机制 :
+	* ArrayMap 4、8，最大容量10，频繁创建对象分配内存和gc
+	* HashMap没有缓存
+	* SparseArray有延迟回收机制，提供删除效率，同时减少数组成员来回拷贝的次数
+* 扩容 :
+	* ArrayMap 4、8、1.5倍
+	* 0.75 * capacity时，触发扩容，2的幂次方
+* 并发 :
+	*  都不支持多线程
 
 
 ## 引用
 [当面试官问我ArrayList和LinkedList哪个更占空间时，我这么答让他眼前一亮](https://zhuanlan.zhihu.com/p/166686856)
+[深度解读ArrayMap优势与缺陷](http://gityuan.com/2019/01/13/arraymap/)
+[ArrayMap的hash碰撞和内存优化的原理](http://gaozhipeng.me/posts/arraymap/)
