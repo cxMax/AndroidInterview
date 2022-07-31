@@ -1,50 +1,44 @@
 package com.cxmax.third.tree;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
 /**
- * https://leetcode-cn.com/problems/binary-tree-level-order-traversal/
+ * https://leetcode.cn/problems/binary-tree-level-order-traversal-ii/
  * <p>
- * 102. 二叉树的层序遍历，自顶向下
+ * 107. 二叉树的层序遍历 II
  * <p>
  * 输入：root = [3,9,20,null,null,15,7]
  * <p>
- * 输出：[[3],[9,20],[15,7]]
+ * 输出：[[15,7],[9,20],[3]]
  * <p>
  * Created by caixi on 2022/7/31.
  */
-public class LevelOrder {
+public class LevelOrderBottom {
 
     List<List<Integer>> result = new ArrayList<>();
 
     /**
-     * 层序遍历， 还是好理解， 就是按照一层一层来，输出结果，结果是一个二维数组
-     *
-     * 一定记住按照一层一层的思想来
-     * 1. 用到了双端队列
-     * 2. 还是按照根、左、右来
+     * 和102一样， 还是层序遍历，只是直接使用数组反转，
      *
      * @param root
      * @return
      */
-    public List<List<Integer>> levelOrder(TreeNode root) {
+    public List<List<Integer>> levelOrderBottom(TreeNode root) {
         if (root == null) {
             return result;
         }
         Queue<TreeNode> queue = new LinkedList<>();
         queue.offer(root);
         while (!queue.isEmpty()) {
-            // 每一层
             List<Integer> list = new ArrayList<>();
-            // 每一层节点个数
             int len = queue.size();
-            while(len > 0) {
+            while (len > 0) {
                 TreeNode tmp = queue.poll();
                 list.add(tmp.val);
-                // 这里因为是双端队列，先进先出，所以按顺序就行了
                 if (tmp.left != null) {
                     queue.offer(tmp.left);
                 }
@@ -55,7 +49,7 @@ public class LevelOrder {
             }
             result.add(list);
         }
+        Collections.reverse(result);
         return result;
-
     }
 }
