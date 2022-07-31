@@ -85,110 +85,132 @@
 
 ## List
 
-### ArrayList : 
-> ArrayList 是一个数组队列，相当于 动态数组
+### ArrayList
 
-* ArrayList中的操作不是线程安全的！所以，建议在单线程中才使用ArrayList，而在多线程中可以选择Vector或者CopyOnWriteArrayList。
-* 通过一个数组去保存数据的, 默认容量大小是10,新的容量=“(原始容量x3)/2 + 1”, 是将全部元素克隆到一个数组中。数组拷贝的方式
-	* 3种遍历方式及效率 ：
-		1. 迭代器遍历； 最低
-		2. 随机访问，通过索引值去遍历；  最快
-		3. for循环遍历； 跟get差不多
+#### 基本原理
+* object[] 数组，内存中是连续的
+* 默认容量为10，初次add的时候，初始化
+* 扩容的时候是1.5倍，System.arraycopy的方式进行扩容
+* 数组会申请内存空间，即使你没用到，也会申请一个内存地址，会有内存地址浪费的问题
+* object[] 数组使用transient关键字修饰，重写了wirteObject方法，避免内存空间浪费，只对数组内有数据的对象进行序列化
+* 遍历效率 : get > foreach > iterator
+* Arrays.sort原理是用的快排
 
-### LinkedList : 
-> 通过双向链表去实现的
+#### 优缺点
+* 查找效率更高
+* 遍历效率低
+* 添加删除元素，需要移动元素，效率低（因为数组中元素不能删除，需要进行覆盖）
+* 扩容时，使用的数组拷贝，性能开销大
+* Collections.synchronizedList 实现线程安全，通过代理模式，内部持有真正的list，synchronized进行所有操作锁对象的方式实现，推荐使用CopyOnWriteArrayList
 
-* Entry - <br>Entry是双向链表节点所对应的数据结构，它包括的属性有：当前节点所包含的值，上一个节点，下一个节点。不存在LinkedList容量不足的问题
+### LinkedList
 
+#### 基本原理
+* 双向链表，动态分配内存，内存地址不连续
+* 也实现了queue的接口，双端队列，可以用作stack
 
-* 7种遍历方式以及效率 ：
-	1. 第一种，通过迭代器遍历。即通过Iterator去遍历。
-	2. 通过快速随机访问遍历LinkedList
-	3. 通过另外一种for循环来遍历LinkedList
-	4. 通过pollFirst()来遍历LinkedList
-	5. 通过pollLast()来遍历LinkedList
-	6. 通过removeFirst()来遍历LinkedList
-	7. 通过removeLast()来遍历LinkedList
-		使用removeFist()或removeLast()效率最高， 只读不删除的话应该使用第3种遍历方式
-		
-* LinkedList和ArrayList在实际开发中内存占用
-	* 一般情况下，LinkedList的占用空间更大，因为每个节点要维护指向前后地址的两个节点，但也不是绝对，如果刚好数据量超过ArrayList默认的临时值时，ArrayList占用的空间也是不小的，因为扩容的原因会浪费将近原来数组一半的容量，不过，因为ArrayList的数组变量是用transient关键字修饰的，如果集合本身需要做序列化操作的话，ArrayList这部分多余的空间不会被序列化
+#### 优缺点
+* 添加删除元素，效率高
+* 查询效率低，每次查找都要从头节点开始往后查找
+* 遍历效率，removeFist()或removeLast()的效率最高, 但读取数值的话 还是用foreach遍历
+
+### LinkedList和ArrayList在实际开发中内存占用
+* 一般情况下，LinkedList的占用空间更大，因为每个节点要维护指向前后地址的两个节点，但也不是绝对，如果刚好数据量超过ArrayList默认的临时值时，ArrayList占用的空间也是不小的，因为扩容的原因会浪费将近原来数组一半的容量，不过，因为ArrayList的数组变量是用transient关键字修饰的，如果集合本身需要做序列化操作的话，ArrayList这部分多余的空间不会被序列化
+
+### Vector
+> 线程安全，不推荐使用，推荐使用CopyOnWriteArrayList
+
+#### 基本原理
+* object[] 数组，但未使用transient关键字，也就意味着，序列化的时候，有更大的内存开销
+* 初始容量为10，其他都跟ArrayList一样
+* 所有操作都是synchronized关键字
+* 遍历 : 多了一个Enumeration遍历
+
+#### Enumeration和Iterator区别
+* Iterator
+	* 遍历拥有fast-fail机制，多线程操作，会抛异常，ConcurrentModificationException
+* Enumeration
+	* 不会抛出异常，ConcurrentModificationException
+
+### CopyOnWriteArrayList
+> 实现方式和ArrayList基本一致，concurrent包下面的
+
+#### 基本原理
+* 修改元素的时候，加锁方式不一样，Collections.synchronizedList和Vector，读、写都锁对象；CopyOnWriteArrayList修改元素加锁，读不加锁。
 
 ## Map
 ### WeakHashMap : 
+* 数组 + 单链表，不会转红黑树；Entry是弱音用
 * HashMap都是通过”拉链法"实现的散列表
 
-### HashMap : 
-* HashMap中的key-value都是存储在Entry数组中的, Node[] table。
-* Node 这个数据结构是个单链表。
-* HashMap将“key为null”的元素都放在table的位置0处
-	* “拉链法” - 当命中到同一位置之后, 会以链表的形式向后面链接, 在1.8, 当链表过长时, 会转化为红黑树, 增加查询的效率
-	* 拉链法 - 主要为了解决hash冲突
+### HashSet/HashMap
+
+#### 基本原理
+* 数组 + 单链表 + 红黑树
+* 初始容量为16，因子为0.75（达到容量的0.75倍开始扩容），扩容大小为2的次幂
+* 单个链表元素超过8，会将单链表转变为红黑树；红黑树节点小于6，会将红黑树转新变为单链表。为了提升检索效率。
+* 单个元素查询效率o(1)，红黑树o(logn)
+* 重写了hashcode和equals，查询效率最快，key通过hash算法，直接得到数组下标；在通过equals对比key，拿到value
+* hash冲突就是指，不同key通过hash算法（模运算）指向同一个下标
+* 拉链法是指，指向链表最后一个位置
+* 死循环情况
 	* HashMap在并发使用场景发生死循环 或 数据丢失。主要发生场景实在扩容的时候， 产生循环链表，出发死循环 
+* key，value支持null
 
-* HashMap的查找效率最快，时间复杂度为o(1)， 是因为hash算法，存储的key值直接指向存储的数组的位置，用到了模运算，所以HashMap的容量大小为2的幂次方
-* 最坏的打算，是存储变为单链表，时间复杂度一下退化至o(n)，为了解决查询效率，容量大小超过8的时候，会转化为红黑树，查找效率为o(logn)
+#### 红黑树是什么？
+* 相对接近平衡的二叉树
+* 每个节点要么红色，要么是黑色
+* 根节点一定是黑色
+* 每个空叶子节点必须是黑色
+* 如果一个节点是红色的，那么它的子节点必须是黑色
+* 从一个节点到该节点的子孙节点的所有路径包含相同个数的黑色节点
 
+#### HashMap是先扩容？还是先转红黑树？
+> 答案：先扩容，再转红黑树
 
-### HashTable : 
-* 通过synchronized关键字实现线程安全
-* HashTable虽然也是散列表, 通过拉链法解决"hash冲突",同样也是put<key, value>但跟HashMap还是有以下区别 :  
-	* 遍历实现方式 : HashMap只支持Iterator, HashTable则支持Enumeration, Iterator
-	* HashMap的key, 使用了"hash算法" ; 但是HashTable的key,则仅仅是Object.hashCode()。 
+* 扩容：resize
+* 转红黑树：treeifyBin
 
-### ConcurrentHashMap : 
+#### HashMap扩容算法
+* 新的地址 = 原长度 + 原位置
 
-#### 为什么不用Hashtable和Collections.synchronizedMap(hashMap)
-* 因为是对读写进行加锁操作，一个线程在读写元素，其余线程必须等待，性能可想而知
-	* 1.6版本 :
-		* 分段锁的机制，实现并发的更新操作，底层采用数组+链表+红黑树的存储结构
-		* Segment : 继承ReentrantLock用来充当锁的角色，每个 Segment 对象守护每个散列映射表的若干个桶
-		* HashEntry : 用来封装映射表的键 / 值对
-		* 每个桶是由若干个 HashEntry 对象链接起来的链表
-	* 1.8版本 :
-		* 抛弃了Segment分段锁机制，利用CAS+Synchronized来保证并发更新的安全，底层依然采用node数组+链表+红黑树的存储结构,node代表key,value
+#### HashSet如何保证数据不重复？
+* ashSet的add()函数调用了HashMap的put, 先比较hashCode, 在比较equals函数, 因此一个Object需要重写hashCode和equals这两个函数
 
-#### 为什么使用红黑树 ?
+### LinkedHashMap
+> LruCache的实现
 
-* 把链表转化为红黑树，提高遍历查询效率
-* 在1.8的实现中，当一个链表中的元素达到8个时，会调用treeifyBin()方法把链表结构转化成红黑树结构
-	* 红黑树 : 
-		* 相对接近平衡的二叉树
-		* 每个节点要么红色，要么是黑色
-		* 根节点一定是黑色
-		* 每个空叶子节点必须是黑色
-		* 如果一个节点是红色的，那么它的子节点必须是黑色
-		* 从一个节点到该节点的子孙节点的所有路径包含相同个数的黑色节点
-* ConcurrentHashMap 是一个并发散列映射表的实现，它允许完全并发的读取，并且支持给定数量的并发更新
-* size()方法 : 
-	* 1.7的实现 : (不准确的) 
-		* 先采用不加锁的方式，连续计算元素的个数，最多计算3次： 			1. 如果前后两次计算结果相同，则说明计算出来的元素个数是准确的； 			2. 如果前后两次计算结果都不同，则给每个Segment进行加锁，再计算一次元素的个数；
-	* 1.8的实现 :
-		* 使用一个volatile类型的变量baseCount记录元素的个数
-		* 元素个数保存baseCount中，部分元素的变化个数保存在CounterCell数组中
-		* 通过累加baseCount和CounterCell数组中的数量，即可得到元素的总个数
+#### 基本原理
+* entry和map都继承与HashMap
+* 不一样的是，双链表，增加两个node，分别指向前、后
+* 因此保证了有序，输入和输出顺序相同
 
-### TreeMap : 
-* TreeMap 也是哈希表，不过TreeMap中的“键-值对”是有序的，它是通过R-B Tree(红黑树)实现的；TreeMap不是线程安全的，只适用于单线程
+### ConcurrentHashMap
 
-* Iterator和Enumeration区别 ：
-	* Iterator支持fail-fast机制，而Enumeration不支持
-	* 在Vector、Hashtable实现Enumeration时，添加了同步
+#### 基本原理
+* 数组 + 单链表 + 转红黑树
+* CAS + Volatile关键字来做的
 
-### HashSet :
-* Set的实现类都是基于Map来实现的
-* HashSet 是内部实现 , 是基于HashMap的
-* 如何保证数据不重复？
-	* HashSet的add()函数调用了HashMap的put, 先比较hashCode, 在比较equals函数, 因此一个Object需要重写hashCode和equals这两个函数
+### TreeSet/TreeMap
 
+#### 基本原理
+* 红黑树实现
+* 实现排序的两种方式
+	* 通过实现构造函数compator接口，实现排序
+	* 通过对象实现comparable接口，实现排序
 
-### TreeSet :
-* TreeSet也是一个没有重复元素的集合，不过和HashSet不同的是，TreeSet中的元素是有序的；它是通过TreeMap实现的；TreeSet也不是线程安全的，只适用于单线程。
-* 问TreeSet线程安全的实现两种方式 ? 
-	* ConcurrentSkipListSet,这个东西是通过ConcurrentSkipListMap这个来实现的, 其内部实现是跳表, 非红黑树(ConcurrentHashMap)
-	* Collections.synchronizedSortedSet, 所有这个类似api的实现方式都是底层SynchronizedCollection这个来实现的
-* 问如何实现有序的 ? 
-	* 其iterator遍历还是调用的TreeMap的遍历, 通过TreeMap实现有序遍历
+#### 线程安全的实现两种方式
+* ConcurrentSkipListSet,这个东西是通过ConcurrentSkipListMap这个来实现的, 其内部实现是跳表, 非红黑树(ConcurrentHashMap)
+* Collections.synchronizedSortedSet, 所有这个类似api的实现方式都是底层SynchronizedCollection这个来实现的
+
+### HashTable
+
+#### 基本原理
+* 数组 + 单链表，不会转红黑树
+* synchronized锁对象，读、写都加锁
+* hash算法就仅仅是hashcode
+* put不支持null
+
 
 ## Android特有的数据结构
 
