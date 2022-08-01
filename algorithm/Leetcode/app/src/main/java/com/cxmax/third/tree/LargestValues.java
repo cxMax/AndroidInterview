@@ -36,6 +36,7 @@ public class LargestValues {
         while (!queue.isEmpty()) {
             // 这层最大的数
             // 这一层有多少个元素
+            // todo caixi 2022-8-1 这里写错了， 我用的math.max ，结果没通过，还是用的api遍历去比较
             List<Integer> max = new ArrayList<>();
             int len = queue.size();
             for (int i = 0; i < len; i++) {
